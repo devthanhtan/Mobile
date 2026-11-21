@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flame/components.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../constants.dart';
 
@@ -12,8 +13,8 @@ class VirtualJoystick extends StatefulWidget {
   const VirtualJoystick({
     super.key,
     required this.onDirectionChanged,
-    this.size = 124.0,
-    this.knobRadius = 21.0,
+    this.size = GameConstants.hudJoystickSize,
+    this.knobRadius = GameConstants.hudJoystickKnobRadius,
   });
 
   @override
@@ -23,6 +24,7 @@ class VirtualJoystick extends StatefulWidget {
 class _VirtualJoystickState extends State<VirtualJoystick> {
   Offset _knobOffset = Offset.zero;
   int? _activePointerId;
+  final Vector2 _dirScratch = Vector2.zero();
 
   double get _baseRadius => widget.size / 2;
   double get _maxTravel => _baseRadius - widget.knobRadius;
@@ -46,11 +48,11 @@ class _VirtualJoystickState extends State<VirtualJoystick> {
     if (_maxTravel > 0) {
       final normX = (clampedOffset.dx / _maxTravel).clamp(-1.0, 1.0);
       final normY = (clampedOffset.dy / _maxTravel).clamp(-1.0, 1.0);
-      final dir = Vector2(normX, normY);
-      if (dir.length < 0.08) {
+      _dirScratch.setValues(normX, normY);
+      if (_dirScratch.length2 < 0.08 * 0.08) {
         widget.onDirectionChanged(Vector2.zero());
       } else {
-        widget.onDirectionChanged(dir);
+        widget.onDirectionChanged(_dirScratch);
       }
     }
   }
@@ -101,23 +103,23 @@ class _VirtualJoystickState extends State<VirtualJoystick> {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              // Vòng tròn nền bán trong suốt
               AnimatedContainer(
                 duration: const Duration(milliseconds: 100),
                 width: widget.size,
                 height: widget.size,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: isActive ? 0.22 : 0.14),
+                  color: GameConstants.pixelInk.withValues(
+                    alpha: isActive ? 0.56 : 0.42,
+                  ),
                   border: Border.all(
-                    color: Colors.white.withValues(
-                      alpha: isActive ? 0.42 : 0.24,
-                    ),
-                    width: 1.8,
+                    color: isActive
+                        ? GameConstants.pixelCyan.withValues(alpha: 0.78)
+                        : GameConstants.cardBorderColor.withValues(alpha: 0.85),
+                    width: GameConstants.hudBorderWidth,
                   ),
                 ),
               ),
-              // Núm tròn trắng xám bên trong di chuyển mượt
               Transform.translate(
                 offset: _knobOffset,
                 child: Container(
@@ -125,15 +127,14 @@ class _VirtualJoystickState extends State<VirtualJoystick> {
                   height: widget.knobRadius * 2,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withValues(
-                      alpha: isActive ? 0.90 : 0.72,
+                    color: GameConstants.pixelWhite.withValues(
+                      alpha: isActive ? 0.92 : 0.78,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.3),
-                        blurRadius: 6,
-                      ),
-                    ],
+                    border: Border.all(
+                      color: GameConstants.pixelInk,
+                      width: GameConstants.hudBorderWidth,
+                    ),
+                    boxShadow: GameConstants.hudPixelShadow,
                   ),
                 ),
               ),
@@ -155,7 +156,7 @@ class ShootButton extends StatefulWidget {
     super.key,
     required this.onShootingChanged,
     required this.onAimChanged,
-    this.size = 104.0,
+    this.size = GameConstants.hudShootButtonSize,
   });
 
   @override
@@ -165,6 +166,7 @@ class ShootButton extends StatefulWidget {
 class _ShootButtonState extends State<ShootButton> {
   int? _activePointerId;
   Offset _aimDragOffset = Offset.zero;
+  final Vector2 _aimScratch = Vector2.zero();
 
   double get _radius => widget.size / 2;
 
@@ -180,7 +182,9 @@ class _ShootButtonState extends State<ShootButton> {
             ? delta * (maxVisual / dist)
             : delta;
       });
-      widget.onAimChanged(Vector2(delta.dx, delta.dy).normalized());
+      _aimScratch.setValues(delta.dx, delta.dy);
+      _aimScratch.normalize();
+      widget.onAimChanged(_aimScratch);
     } else {
       setState(() {
         _aimDragOffset = Offset.zero;
@@ -240,19 +244,16 @@ class _ShootButtonState extends State<ShootButton> {
             height: widget.size,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: isPressed ? 0.32 : 0.18),
+              color: isPressed
+                  ? GameConstants.accentColor.withValues(alpha: 0.34)
+                  : GameConstants.pixelInk.withValues(alpha: 0.62),
               border: Border.all(
-                color: Colors.white.withValues(alpha: isPressed ? 0.55 : 0.28),
-                width: 2.0,
+                color: isPressed
+                    ? GameConstants.hudGoldColor
+                    : GameConstants.accentColor.withValues(alpha: 0.85),
+                width: GameConstants.hudBorderWidth + 0.5,
               ),
-              boxShadow: isPressed
-                  ? [
-                      BoxShadow(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        blurRadius: 12,
-                      ),
-                    ]
-                  : null,
+              boxShadow: GameConstants.hudPixelShadow,
             ),
             child: Transform.translate(
               offset: _aimDragOffset * 0.45,
@@ -270,32 +271,39 @@ class _ShootButtonState extends State<ShootButton> {
 class _CrosshairReticlePainter extends CustomPainter {
   final bool isActive;
 
-  _CrosshairReticlePainter({required this.isActive});
+  static final Paint _activeStrokePaint = Paint()
+    ..color = GameConstants.hudGoldColor
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 2.4
+    ..strokeCap = StrokeCap.square;
+
+  static final Paint _idleStrokePaint = Paint()
+    ..color = GameConstants.pixelWhite.withValues(alpha: 0.86)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 2.4
+    ..strokeCap = StrokeCap.square;
+
+  static final Paint _centerDotPaint = Paint()
+    ..color = GameConstants.hudGoldColor;
+
+  const _CrosshairReticlePainter({required this.isActive});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
+    final center = Offset(size.width * 0.5, size.height * 0.5);
     final outerR = size.width * 0.25;
     final innerR = size.width * 0.11;
-    final color = Colors.white.withValues(alpha: isActive ? 0.92 : 0.72);
+    final strokePaint = isActive ? _activeStrokePaint : _idleStrokePaint;
 
-    final strokePaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.4
-      ..strokeCap = StrokeCap.round;
-
-    // Hai vòng tròn đồng tâm
     canvas.drawCircle(center, outerR, strokePaint);
     canvas.drawCircle(center, innerR, strokePaint);
 
-    // 4 vạch ngắm trên/dưới/trái/phải
     final tickInner = outerR - 4.0;
     final tickOuter = outerR + 6.5;
     for (int i = 0; i < 4; i++) {
-      final angle = i * math.pi / 2;
-      final cosA = math.cos(angle);
-      final sinA = math.sin(angle);
+      final a = i * math.pi / 2;
+      final cosA = math.cos(a);
+      final sinA = math.sin(a);
       canvas.drawLine(
         Offset(center.dx + cosA * tickInner, center.dy + sinA * tickInner),
         Offset(center.dx + cosA * tickOuter, center.dy + sinA * tickOuter),
@@ -304,7 +312,7 @@ class _CrosshairReticlePainter extends CustomPainter {
     }
 
     if (isActive) {
-      canvas.drawCircle(center, 3.0, Paint()..color = color);
+      canvas.drawCircle(center, 3.0, _centerDotPaint);
     }
   }
 
@@ -313,19 +321,24 @@ class _CrosshairReticlePainter extends CustomPainter {
       oldDelegate.isActive != isActive;
 }
 
-/// Nút Lướt (Dash) với biểu tượng tia sét xanh dương và hồi chiêu 8 giây
+/// Nút Lướt (Dash) tối ưu rebuild thấp:
+/// - Khi truyền [cooldownListenable], phần quạt hồi chiêu vẽ bằng CustomPainter lắng nghe
+///   trực tiếp Listenable (0 rebuild widget), còn số giây/trạng thái chỉ rebuild khi đổi giây nguyên (1 lần/giây).
+/// - Giữ tương thích ngược với [cooldownRemaining] tĩnh cho unit/widget test.
 class DashButton extends StatefulWidget {
   final VoidCallback onDash;
   final double cooldownRemaining;
+  final ValueListenable<double>? cooldownListenable;
   final double cooldownTotal;
   final double size;
 
   const DashButton({
     super.key,
     required this.onDash,
-    required this.cooldownRemaining,
+    this.cooldownRemaining = 0.0,
+    this.cooldownListenable,
     this.cooldownTotal = GameConstants.dashCooldownSeconds,
-    this.size = 74.0,
+    this.size = GameConstants.hudDashButtonSize,
   });
 
   @override
@@ -334,14 +347,54 @@ class DashButton extends StatefulWidget {
 
 class _DashButtonState extends State<DashButton> {
   bool _isPressed = false;
+  int _displayedSeconds = 0;
 
-  bool get _isReady => widget.cooldownRemaining <= 0.01;
+  double get _effectiveCooldown =>
+      widget.cooldownListenable?.value ?? widget.cooldownRemaining;
+
+  bool get _isReady => _effectiveCooldown <= 0.01;
+
+  @override
+  void initState() {
+    super.initState();
+    _displayedSeconds = _effectiveCooldown <= 0.01
+        ? 0
+        : _effectiveCooldown.ceil();
+    widget.cooldownListenable?.addListener(_onCooldownTick);
+  }
+
+  @override
+  void didUpdateWidget(covariant DashButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.cooldownListenable != widget.cooldownListenable) {
+      oldWidget.cooldownListenable?.removeListener(_onCooldownTick);
+      widget.cooldownListenable?.addListener(_onCooldownTick);
+    }
+    _displayedSeconds = _effectiveCooldown <= 0.01
+        ? 0
+        : _effectiveCooldown.ceil();
+  }
+
+  void _onCooldownTick() {
+    final cd = _effectiveCooldown;
+    final nextSec = cd <= 0.01 ? 0 : cd.ceil();
+    // Chỉ rebuild widget khi đổi giây hiển thị hoặc chuyển trạng thái sẵn sàng (1 lần/giây)
+    if (nextSec != _displayedSeconds && mounted) {
+      setState(() {
+        _displayedSeconds = nextSec;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.cooldownListenable?.removeListener(_onCooldownTick);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final fraction = widget.cooldownTotal > 0
-        ? (widget.cooldownRemaining / widget.cooldownTotal).clamp(0.0, 1.0)
-        : 0.0;
+    final isReady = _displayedSeconds == 0 && _isReady;
 
     return Semantics(
       button: true,
@@ -365,7 +418,7 @@ class _DashButtonState extends State<DashButton> {
           }
         },
         child: AnimatedScale(
-          scale: _isPressed && _isReady ? 0.90 : 1.0,
+          scale: _isPressed && isReady ? 0.90 : 1.0,
           duration: const Duration(milliseconds: 70),
           child: SizedBox(
             width: widget.size,
@@ -373,67 +426,71 @@ class _DashButtonState extends State<DashButton> {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // Nền tròn
+                // Nền tròn khung pixel
                 Container(
                   width: widget.size,
                   height: widget.size,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: _isReady
-                        ? Colors.white.withValues(alpha: 0.20)
-                        : Colors.black.withValues(alpha: 0.48),
+                    color: isReady
+                        ? GameConstants.pixelInk.withValues(alpha: 0.76)
+                        : GameConstants.pixelShadowBlack.withValues(
+                            alpha: 0.78,
+                          ),
                     border: Border.all(
-                      color: _isReady
-                          ? GameConstants.dashCyanColor.withValues(alpha: 0.65)
-                          : Colors.white.withValues(alpha: 0.22),
-                      width: _isReady ? 2.0 : 1.4,
+                      color: isReady
+                          ? GameConstants.dashCyanColor
+                          : GameConstants.pixelSlate.withValues(alpha: 0.65),
+                      width: GameConstants.hudBorderWidth,
                     ),
-                    boxShadow: _isReady
-                        ? [
-                            BoxShadow(
-                              color: GameConstants.dashCyanColor.withValues(
-                                alpha: 0.25,
-                              ),
-                              blurRadius: 10,
-                            ),
-                          ]
-                        : null,
+                    boxShadow: GameConstants.hudPixelShadow,
                   ),
                 ),
                 // Biểu tượng tia sét cyan giống Soul Knight
                 Icon(
                   Icons.bolt_rounded,
-                  size: widget.size * 0.62,
-                  color: _isReady
+                  size: widget.size * 0.60,
+                  color: isReady
                       ? GameConstants.dashCyanColor
-                      : GameConstants.dashCyanColor.withValues(alpha: 0.30),
+                      : GameConstants.pixelSlate.withValues(alpha: 0.45),
                 ),
-                // Lớp phủ đồng hồ đếm ngược 8s hình quạt
-                if (!_isReady)
+                // Lớp phủ quạt đếm ngược vẽ trực tiếp bằng CustomPainter (không rebuild widget)
+                if (!isReady)
                   Positioned.fill(
                     child: ClipOval(
                       child: CustomPaint(
-                        painter: _CooldownSweepPainter(fraction: fraction),
+                        painter: _CooldownSweepPainter(
+                          cooldownListenable: widget.cooldownListenable,
+                          fallbackRemaining: widget.cooldownRemaining,
+                          cooldownTotal: widget.cooldownTotal,
+                        ),
                       ),
                     ),
                   ),
-                // Số giây đếm ngược rõ nét
-                if (!_isReady)
+                // Số giây đếm ngược rõ nét (chỉ cập nhật 1 lần/giây)
+                if (!isReady)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 5,
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.55),
-                      borderRadius: BorderRadius.circular(8),
+                      color: GameConstants.pixelInk.withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(
+                        GameConstants.hudBarCornerRadius,
+                      ),
+                      border: Border.all(
+                        color: GameConstants.cardBorderColor,
+                        width: 1.2,
+                      ),
                     ),
                     child: Text(
-                      '${widget.cooldownRemaining.ceil()}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
+                      '$_displayedSeconds',
+                      style: GameConstants.hudTextStyle(
+                        fontSize: 17,
+                        color: GameConstants.hudTextPrimaryColor,
                         fontWeight: FontWeight.w900,
+                        tabularNumbers: true,
                       ),
                     ),
                   ),
@@ -447,26 +504,42 @@ class _DashButtonState extends State<DashButton> {
 }
 
 class _CooldownSweepPainter extends CustomPainter {
-  final double fraction;
+  final ValueListenable<double>? cooldownListenable;
+  final double fallbackRemaining;
+  final double cooldownTotal;
 
-  _CooldownSweepPainter({required this.fraction});
+  static final Paint _sweepPaint = Paint()
+    ..color = GameConstants.pixelShadowBlack.withValues(alpha: 0.58);
+
+  _CooldownSweepPainter({
+    required this.cooldownListenable,
+    required this.fallbackRemaining,
+    required this.cooldownTotal,
+  }) : super(repaint: cooldownListenable);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final rect = Rect.fromCircle(center: center, radius: size.width / 2);
+    final remaining = cooldownListenable?.value ?? fallbackRemaining;
+    if (remaining <= 0.01 || cooldownTotal <= 0) {
+      return;
+    }
+    final fraction = (remaining / cooldownTotal).clamp(0.0, 1.0);
+    final center = Offset(size.width * 0.5, size.height * 0.5);
+    final rect = Rect.fromCircle(center: center, radius: size.width * 0.5);
     canvas.drawArc(
       rect,
       -math.pi / 2,
       -math.pi * 2 * fraction,
       true,
-      Paint()..color = Colors.black.withValues(alpha: 0.52),
+      _sweepPaint,
     );
   }
 
   @override
   bool shouldRepaint(covariant _CooldownSweepPainter oldDelegate) =>
-      (oldDelegate.fraction - fraction).abs() > 0.005;
+      oldDelegate.cooldownListenable != cooldownListenable ||
+      (oldDelegate.fallbackRemaining - fallbackRemaining).abs() > 0.01 ||
+      oldDelegate.cooldownTotal != cooldownTotal;
 }
 
 /// Nút hiển thị & đổi vũ khí (Slot 1 / 2) với mũi tên xoay tròn và badge kim cương xanh
@@ -481,7 +554,7 @@ class WeaponSwitchButton extends StatefulWidget {
     required this.weaponAssetPath,
     required this.activeSlotNumber,
     required this.onSwitch,
-    this.size = 68.0,
+    this.size = GameConstants.hudWeaponSwitchButtonSize,
   });
 
   @override
@@ -526,16 +599,19 @@ class _WeaponSwitchButtonState extends State<WeaponSwitchButton> {
                   height: widget.size,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withValues(
-                      alpha: _isPressed ? 0.30 : 0.18,
-                    ),
+                    color: _isPressed
+                        ? GameConstants.pixelPanelDark
+                        : GameConstants.pixelInk.withValues(alpha: 0.72),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.26),
-                      width: 1.6,
+                      color: _isPressed
+                          ? GameConstants.hudGoldColor
+                          : GameConstants.cardBorderColor,
+                      width: GameConstants.hudBorderWidth,
                     ),
+                    boxShadow: GameConstants.hudPixelShadow,
                   ),
                   child: CustomPaint(
-                    painter: _SwapArrowsPainter(),
+                    painter: const _SwapArrowsPainter(),
                     child: Center(
                       child: Padding(
                         padding: const EdgeInsets.all(14.0),
@@ -548,36 +624,36 @@ class _WeaponSwitchButtonState extends State<WeaponSwitchButton> {
                     ),
                   ),
                 ),
-                // Badge số slot màu xanh hình thoi giống góc trên trái nút vũ khí Soul Knight
                 Positioned(
                   top: 2,
                   left: 2,
                   child: Transform.rotate(
                     angle: math.pi / 4,
                     child: Container(
-                      width: 19,
-                      height: 19,
+                      width: 20,
+                      height: 20,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0288D1),
-                        borderRadius: BorderRadius.circular(3),
-                        border: Border.all(color: Colors.white70, width: 1.0),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.45),
-                            blurRadius: 4,
-                          ),
-                        ],
+                        color: GameConstants.primaryColor,
+                        borderRadius: BorderRadius.circular(
+                          GameConstants.hudBarCornerRadius,
+                        ),
+                        border: Border.all(
+                          color: GameConstants.pixelWhite,
+                          width: 1.4,
+                        ),
+                        boxShadow: GameConstants.hudPixelShadow,
                       ),
                       child: Transform.rotate(
                         angle: -math.pi / 4,
                         child: Text(
                           '${widget.activeSlotNumber}',
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: GameConstants.hudTextStyle(
                             fontSize: 11,
+                            color: GameConstants.hudTextPrimaryColor,
                             fontWeight: FontWeight.w900,
                             height: 1.0,
+                            tabularNumbers: true,
                           ),
                         ),
                       ),
@@ -594,20 +670,21 @@ class _WeaponSwitchButtonState extends State<WeaponSwitchButton> {
 }
 
 class _SwapArrowsPainter extends CustomPainter {
+  static final Paint _arrowPaint = Paint()
+    ..color = GameConstants.pixelSlate.withValues(alpha: 0.65)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 2.0
+    ..strokeCap = StrokeCap.square;
+
+  const _SwapArrowsPainter();
+
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 4.0;
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.45)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0
-      ..strokeCap = StrokeCap.round;
-
+    final center = Offset(size.width * 0.5, size.height * 0.5);
+    final radius = size.width * 0.5 - 4.0;
     final rect = Rect.fromCircle(center: center, radius: radius);
-    // Hai cung tròn đối xứng
-    canvas.drawArc(rect, -0.35, 1.5, false, paint);
-    canvas.drawArc(rect, math.pi - 0.35, 1.5, false, paint);
+    canvas.drawArc(rect, -0.35, 1.5, false, _arrowPaint);
+    canvas.drawArc(rect, math.pi - 0.35, 1.5, false, _arrowPaint);
   }
 
   @override

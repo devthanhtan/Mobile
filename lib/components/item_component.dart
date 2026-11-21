@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../constants.dart';
@@ -13,13 +14,28 @@ enum DropItemType {
   coin, // Xu sinh viên: +10 xu, +50 điểm
 }
 
-/// Vật phẩm rơi trên bản đồ với hiệu ứng nhấp nhô & hút nhẹ khi lại gần
+/// Vật phẩm rơi trên bản đồ sử dụng SpriteAnimationComponent 4 frame (nhấp nhô + lấp lánh)
+/// đã được tạo MỘT LẦN và cache trong PixelSpriteCache (không tạo lại khi spawn).
 class ItemComponent extends PositionComponent
-    with HasGameReference<HuitDeadlineGame> {
+    with CollisionCallbacks, HasGameReference<HuitDeadlineGame> {
   final DropItemType type;
-  SpriteComponent? _sprite;
+  SpriteAnimationComponent? _animComponent;
   double _age = 0;
+  bool isCollected = false;
   static const double _maxLifetime = 18.0;
+  static const double _magnetRangeSq = 88.0 * 88.0;
+  static const double _pickupRangeSq = 30.0 * 30.0;
+
+  static final Map<DropItemType, Paint> _auraPaints = {
+    DropItemType.noodle: Paint()
+      ..color = GameConstants.hudHpHealthyColor.withValues(alpha: 0.24),
+    DropItemType.coffee: Paint()
+      ..color = GameConstants.accentColor.withValues(alpha: 0.24),
+    DropItemType.shield: Paint()
+      ..color = GameConstants.pixelCyan.withValues(alpha: 0.24),
+    DropItemType.coin: Paint()
+      ..color = GameConstants.hudGoldColor.withValues(alpha: 0.24),
+  };
 
   ItemComponent({
     required super.position,
@@ -30,60 +46,77 @@ class ItemComponent extends PositionComponent
          priority: 6,
        );
 
-  String get _flamePath {
-    switch (type) {
-      case DropItemType.noodle:
-        return GameConstants.itemNoodlePath;
-      case DropItemType.coffee:
-        return GameConstants.itemCoffeePath;
-      case DropItemType.shield:
-        return GameConstants.itemShieldPath;
-      case DropItemType.coin:
-        return GameConstants.itemCoinPath;
-    }
-  }
-
-  Color get _auraColor {
-    switch (type) {
-      case DropItemType.noodle:
-        return Colors.greenAccent;
-      case DropItemType.coffee:
-        return Colors.amberAccent;
-      case DropItemType.shield:
-        return Colors.cyanAccent;
-      case DropItemType.coin:
-        return Colors.yellowAccent;
-    }
-  }
-
   @override
   FutureOr<void> onLoad() async {
     await super.onLoad();
-    final image = await game.images.load(_flamePath);
-    _sprite = SpriteComponent(
-      sprite: Sprite(image),
+
+    var anim = game.spriteCache.itemAnimations[type];
+    if (anim == null) {
+      await game.spriteCache.buildAllItemAnimations(game.images);
+      anim = game.spriteCache.itemAnimations[type];
+    }
+
+    _animComponent = SpriteAnimationComponent(
+      animation: anim,
       size: size,
       anchor: Anchor.center,
-      position: size / 2,
+      position: Vector2(size.x * 0.5, size.y * 0.5),
       paint: Paint()..filterQuality = FilterQuality.none,
     );
-    add(_sprite!);
+    add(_animComponent!);
+
+    add(
+      CircleHitbox(
+        radius: size.x * 0.45,
+        anchor: Anchor.center,
+        position: Vector2(size.x * 0.5, size.y * 0.5),
+      )..collisionType = CollisionType.passive,
+    );
+  }
+
+  @override
+  void onMount() {
+    super.onMount();
+    game.registerItem(this);
+  }
+
+  @override
+  void onRemove() {
+    game.unregisterItem(this);
+    super.onRemove();
+  }
+
+  void markCollected() {
+    if (isCollected) {
+      return;
+    }
+    isCollected = true;
+    removeFromParent();
+  }
+
+  @override
+  void renderTree(Canvas canvas) {
+    final half = size.x * 0.7;
+    if (!game.isVisibleInCamera(position.x, position.y, half, half)) {
+      return;
+    }
+    super.renderTree(canvas);
   }
 
   @override
   void render(Canvas canvas) {
-    final center = Offset(size.x / 2, size.y / 2);
+    final half = size.x * 0.5;
     canvas.drawCircle(
-      center,
+      Offset(half, half),
       size.x * 0.56,
-      Paint()..color = _auraColor.withValues(alpha: 0.22),
+      _auraPaints[type]!,
     );
   }
 
   @override
   void update(double dt) {
     super.update(dt);
-    if (game.isGameOver || game.isVictory) {
+    if (isCollected || game.isGameOver || game.isVictory) {
       return;
     }
 
@@ -93,13 +126,9 @@ class ItemComponent extends PositionComponent
       return;
     }
 
-    // Hiệu ứng nhấp nhô nhẹ
-    if (_sprite != null) {
-      _sprite!.position.y = (size.y / 2) + math.sin(_age * 5.0) * 3.0;
-      if (_age > _maxLifetime - 3.0) {
-        final visible = ((_age * 8).floor() % 2 == 0);
-        _sprite!.opacity = visible ? 1.0 : 0.25;
-      }
+    if (_animComponent != null && _age > _maxLifetime - 3.0) {
+      final visible = ((_age * 8).floor() % 2 == 0);
+      _animComponent!.opacity = visible ? 1.0 : 0.25;
     }
 
     final player = game.player;
@@ -107,19 +136,19 @@ class ItemComponent extends PositionComponent
       return;
     }
 
-    final toPlayer = player.position - position;
-    final dist = toPlayer.length;
+    final dx = player.position.x - position.x;
+    final dy = player.position.y - position.y;
+    final distSq = dx * dx + dy * dy;
 
-    // Hút nhẹ về người chơi khi lại gần
-    if (dist > 4.0 && dist < 88.0) {
-      position.add(toPlayer.normalized() * 210.0 * dt);
+    if (distSq > 16.0 && distSq < _magnetRangeSq) {
+      final invDist = (210.0 * dt) / math.sqrt(distSq);
+      position.x += dx * invDist;
+      position.y += dy * invDist;
     }
 
-    // Nhặt vật phẩm
-    if (dist <= 30.0) {
+    if (distSq <= _pickupRangeSq) {
       player.collectItem(type);
-      removeFromParent();
+      markCollected();
     }
   }
 }
-

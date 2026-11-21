@@ -97,8 +97,8 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
               alignment: Alignment.topCenter,
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
+                  horizontal: GameConstants.hudTopPaddingH,
+                  vertical: GameConstants.hudTopPaddingV,
                 ),
                 child: Row(
                   children: [
@@ -111,21 +111,31 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                             horizontal: 10,
                             vertical: 6,
                           ),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.65),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: hero.themeColor.withValues(alpha: 0.6),
-                            ),
+                          decoration: GameConstants.hudPixelBoxDecoration(
+                            color: GameConstants.hudSurfaceColor,
+                            borderColor: hero.themeColor,
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Image.asset(
-                                hero.spriteAssetPath,
-                                width: 28,
-                                height: 28,
-                                filterQuality: FilterQuality.none,
+                              Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: BoxDecoration(
+                                  color: GameConstants.pixelPanelDark,
+                                  borderRadius: BorderRadius.circular(
+                                    GameConstants.hudBarCornerRadius,
+                                  ),
+                                  border: Border.all(
+                                    color: GameConstants.cardBorderColor,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Image.asset(
+                                  hero.spriteAssetPath,
+                                  width: 28,
+                                  height: 28,
+                                  filterQuality: FilterQuality.none,
+                                ),
                               ),
                               const SizedBox(width: 8),
                               Column(
@@ -134,18 +144,19 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                                 children: [
                                   Text(
                                     hero.name,
-                                    style: TextStyle(
+                                    style: GameConstants.hudTextStyle(
+                                      fontSize: 12,
                                       color: hero.themeColor,
                                       fontWeight: FontWeight.w900,
-                                      fontSize: 12,
                                     ),
                                   ),
                                   Text(
                                     'Kỷ lục: $_highScore',
-                                    style: const TextStyle(
-                                      color: Colors.amberAccent,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
+                                    style: GameConstants.hudTextStyle(
+                                      fontSize: GameConstants.hudStatFontSize,
+                                      color: GameConstants.hudGoldColor,
+                                      fontWeight: FontWeight.w800,
+                                      tabularNumbers: true,
                                     ),
                                   ),
                                 ],
@@ -156,17 +167,16 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                       },
                     ),
                     const Spacer(),
-                    // Nút Cài đặt âm thanh góc trên phải
-                    SizedBox(
-                      width: 48,
-                      height: 48,
+                    // Nút Cài đặt âm thanh góc trên phải (đạt chuẩn >= 48x48dp)
+                    Container(
+                      width: GameConstants.hudMinTouchTarget,
+                      height: GameConstants.hudMinTouchTarget,
+                      decoration: GameConstants.hudPixelBoxDecoration(
+                        color: GameConstants.hudSurfaceColor,
+                        borderColor: GameConstants.cardBorderColor,
+                      ),
                       child: Material(
-                        color: Colors.black.withValues(alpha: 0.65),
-                        shape: CircleBorder(
-                          side: BorderSide(
-                            color: Colors.white.withValues(alpha: 0.25),
-                          ),
-                        ),
+                        color: Colors.transparent,
                         child: IconButton(
                           key: const Key('lobby_audio_settings_button'),
                           tooltip: 'Cài đặt âm thanh',
@@ -176,7 +186,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                           },
                           icon: const Icon(
                             Icons.settings_rounded,
-                            color: Colors.white,
+                            color: GameConstants.hudTextPrimaryColor,
                             size: 22,
                           ),
                         ),
@@ -193,10 +203,13 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
             child: Align(
               alignment: Alignment.bottomLeft,
               child: Padding(
-                padding: const EdgeInsets.only(left: 24, bottom: 20),
+                padding: const EdgeInsets.only(
+                  left: GameConstants.hudBottomMarginH,
+                  bottom: GameConstants.hudBottomMarginV,
+                ),
                 child: VirtualJoystick(
-                  size: 120,
-                  knobRadius: 20,
+                  size: GameConstants.hudJoystickSize,
+                  knobRadius: GameConstants.hudJoystickKnobRadius,
                   onDirectionChanged: _lobbyGame.setMoveDirection,
                 ),
               ),
@@ -208,7 +221,10 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
             child: Align(
               alignment: Alignment.bottomRight,
               child: Padding(
-                padding: const EdgeInsets.only(right: 26, bottom: 24),
+                padding: const EdgeInsets.only(
+                  right: GameConstants.hudBottomMarginH + 4,
+                  bottom: GameConstants.hudBottomMarginV + 4,
+                ),
                 child: ValueListenableBuilder<LobbyInteractionTarget>(
                   valueListenable: _lobbyGame.nearbyInteractionNotifier,
                   builder: (context, target, _) {
@@ -218,7 +234,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                     if (target.isPortal) {
                       icon = Icons.door_sliding_rounded;
                       label = 'VÀO CỔNG';
-                      accent = const Color(0xFF64FFDA);
+                      accent = GameConstants.pixelCyan;
                     } else if (target.hero != null) {
                       icon = Icons.swap_horiz_rounded;
                       label = 'ĐỔI NV';
@@ -226,7 +242,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                     } else {
                       icon = Icons.bolt_rounded;
                       label = 'LƯỚT';
-                      accent = Colors.white70;
+                      accent = GameConstants.hudTextPrimaryColor;
                     }
 
                     return Semantics(
@@ -237,41 +253,34 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                         onTap: _lobbyGame.interactOrStep,
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 140),
-                          width: 92,
-                          height: 92,
+                          width: GameConstants.hudLobbyInteractButtonSize,
+                          height: GameConstants.hudLobbyInteractButtonSize,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: target.hasTarget
-                                ? accent.withValues(alpha: 0.25)
-                                : Colors.white.withValues(alpha: 0.16),
+                                ? accent.withValues(alpha: 0.24)
+                                : GameConstants.hudSurfaceColor,
                             border: Border.all(
                               color: target.hasTarget
                                   ? accent
-                                  : Colors.white.withValues(alpha: 0.28),
-                              width: target.hasTarget ? 2.4 : 1.6,
+                                  : GameConstants.cardBorderColor,
+                              width: GameConstants.hudBorderWidth,
                             ),
-                            boxShadow: target.hasTarget
-                                ? [
-                                    BoxShadow(
-                                      color: accent.withValues(alpha: 0.35),
-                                      blurRadius: 12,
-                                    ),
-                                  ]
-                                : null,
+                            boxShadow: GameConstants.hudPixelShadow,
                           ),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(icon, color: accent, size: 32),
+                              Icon(icon, color: accent, size: 30),
                               const SizedBox(height: 2),
                               Text(
                                 label,
-                                style: TextStyle(
+                                style: GameConstants.hudTextStyle(
+                                  fontSize: GameConstants.hudStatFontSize,
                                   color: target.hasTarget
                                       ? accent
-                                      : Colors.white,
+                                      : GameConstants.hudTextPrimaryColor,
                                   fontWeight: FontWeight.w900,
-                                  fontSize: 10.5,
                                 ),
                               ),
                             ],

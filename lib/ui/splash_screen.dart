@@ -82,7 +82,10 @@ class _SplashScreenState extends State<SplashScreen> {
             errorBuilder: (_, _, _) => Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF141526), Color(0xFF232B52)],
+                  colors: [
+                    GameConstants.pixelInk,
+                    GameConstants.pixelPanelDark,
+                  ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
@@ -96,9 +99,9 @@ class _SplashScreenState extends State<SplashScreen> {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withValues(alpha: 0.55),
+                  GameConstants.pixelShadowBlack.withValues(alpha: 0.62),
                   Colors.transparent,
-                  Colors.black.withValues(alpha: 0.65),
+                  GameConstants.pixelShadowBlack.withValues(alpha: 0.72),
                 ],
                 stops: const [0.0, 0.45, 1.0],
               ),
@@ -109,20 +112,18 @@ class _SplashScreenState extends State<SplashScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               child: Stack(
                 children: [
-                  // Nút cài đặt âm thanh ở góc trên bên phải
+                  // Nút cài đặt âm thanh ở góc trên bên phải (đạt chuẩn >= 48dp)
                   Align(
                     alignment: Alignment.topRight,
-                    child: SizedBox(
-                      width: 50,
-                      height: 50,
+                    child: Container(
+                      width: GameConstants.hudMinTouchTarget,
+                      height: GameConstants.hudMinTouchTarget,
+                      decoration: GameConstants.hudPixelBoxDecoration(
+                        color: GameConstants.hudSurfaceColor,
+                        borderColor: GameConstants.cardBorderColor,
+                      ),
                       child: Material(
-                        color: Colors.black.withValues(alpha: 0.60),
-                        shape: CircleBorder(
-                          side: BorderSide(
-                            color: Colors.white.withValues(alpha: 0.35),
-                            width: 1.5,
-                          ),
-                        ),
+                        color: Colors.transparent,
                         child: IconButton(
                           key: const Key('splash_audio_settings_button'),
                           tooltip: 'Cài đặt âm thanh',
@@ -132,8 +133,8 @@ class _SplashScreenState extends State<SplashScreen> {
                           },
                           icon: const Icon(
                             Icons.settings_rounded,
-                            color: Colors.white,
-                            size: 26,
+                            color: GameConstants.hudTextPrimaryColor,
+                            size: 24,
                           ),
                         ),
                       ),
@@ -151,42 +152,37 @@ class _SplashScreenState extends State<SplashScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 14,
-                              vertical: 4,
+                              vertical: 5,
                             ),
-                            decoration: BoxDecoration(
-                              color: GameConstants.primaryColor.withValues(
-                                alpha: 0.9,
-                              ),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: GameConstants.accentColor,
-                                width: 1.5,
-                              ),
+                            decoration: GameConstants.hudPixelBoxDecoration(
+                              color: GameConstants.primaryColor,
+                              borderColor: GameConstants.hudGoldColor,
+                              borderRadius: GameConstants.hudCornerRadius,
                             ),
-                            child: const Text(
+                            child: Text(
                               'HUIT SURVIVAL 2D',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
+                              style: GameConstants.hudTextStyle(
                                 fontSize: 11.5,
-                                letterSpacing: 2.0,
+                                color: GameConstants.hudTextPrimaryColor,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.8,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 6),
-                          const Text(
+                          const SizedBox(height: 8),
+                          Text(
                             'SINH VIÊN HUIT ĐÁNH QUÁI DEADLINE',
                             textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 26,
+                            style: GameConstants.hudTextStyle(
+                              fontSize: 24,
                               fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                              letterSpacing: 1.0,
-                              shadows: [
+                              color: GameConstants.hudTextPrimaryColor,
+                              letterSpacing: 0.8,
+                              shadows: const [
                                 Shadow(
-                                  color: Colors.black,
-                                  offset: Offset(0, 3),
-                                  blurRadius: 8,
+                                  color: GameConstants.pixelShadowBlack,
+                                  offset: Offset(2, 2),
+                                  blurRadius: 0,
                                 ),
                               ],
                             ),
@@ -201,32 +197,41 @@ class _SplashScreenState extends State<SplashScreen> {
                     alignment: Alignment.bottomCenter,
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: 10),
-                      child: SizedBox(
-                        width: 210,
-                        height: 52,
+                      child: Container(
+                        width: GameConstants.hudSplashPlayButtonWidth,
+                        height: GameConstants.hudSplashPlayButtonHeight,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(
+                            GameConstants.hudModalCornerRadius,
+                          ),
+                          boxShadow: GameConstants.hudPixelShadow,
+                        ),
                         child: ElevatedButton.icon(
                           key: const Key('splash_play_button'),
                           onPressed: _enterLobby,
                           icon: const Icon(Icons.play_arrow_rounded, size: 30),
-                          label: const Text(
+                          label: Text(
                             'CHƠI',
-                            style: TextStyle(
+                            style: GameConstants.hudTextStyle(
                               fontSize: 19,
+                              color: GameConstants.pixelInk,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 1.8,
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: GameConstants.accentColor,
-                            foregroundColor: Colors.black,
+                            foregroundColor: GameConstants.pixelInk,
+                            elevation: 0,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(26),
+                              borderRadius: BorderRadius.circular(
+                                GameConstants.hudModalCornerRadius,
+                              ),
                               side: const BorderSide(
-                                color: Colors.white70,
-                                width: 2,
+                                color: GameConstants.hudGoldColor,
+                                width: GameConstants.hudBorderWidth,
                               ),
                             ),
-                            elevation: 10,
                           ),
                         ),
                       ),

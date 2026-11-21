@@ -44,7 +44,7 @@ class HuitDeadlineApp extends StatelessWidget {
           secondary: GameConstants.accentColor,
         ),
         useMaterial3: true,
-        fontFamily: 'Roboto',
+        fontFamily: GameConstants.pixelFontFamily,
       ),
       home: const SplashScreen(),
     );

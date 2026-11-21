@@ -21,6 +21,7 @@ class AudioSettingsService extends ChangeNotifier {
   double _sfxVolume = 0.85;
   bool _initialized = false;
   bool _bgmStarted = false;
+  int _lastShootSfxMs = 0;
 
   bool get musicEnabled => _musicEnabled;
   bool get sfxEnabled => _sfxEnabled;
@@ -128,7 +129,15 @@ class AudioSettingsService extends ChangeNotifier {
   }
 
   void playUiClick() => _playSfx(GameConstants.sfxUiAudio);
-  void playShoot() => _playSfx(GameConstants.sfxShootAudio);
+  void playShoot() {
+    // Giới hạn tần suất phát SFX bắn (>= 65ms) tránh nghẽn AudioTrack trên Android khi bắn liên thanh
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (now - _lastShootSfxMs < 65) {
+      return;
+    }
+    _lastShootSfxMs = now;
+    _playSfx(GameConstants.sfxShootAudio);
+  }
   void playDash() => _playSfx(GameConstants.sfxDashAudio);
 
   void _playSfx(String file) {

@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import '../constants.dart';
+import 'weapon_config.dart';
 import 'weapon_info.dart';
 
 /// Enum phân loại 3 class nhân vật Sinh viên HUIT
 enum PlayerClassType {
-  it, // Công nghệ thông tin
-  food, // Công nghệ thực phẩm
-  eco, // Kinh tế / Quản trị
+  it, // Công nghệ thông tin (Kính cận cyan)
+  food, // Công nghệ thực phẩm (Kính bảo hộ xanh lá)
+  eco, // Kinh tế / Quản trị (Mũ vàng)
 }
 
-/// Lớp lưu trữ thông tin chỉ số, vũ khí và hình ảnh của từng class
+/// Lớp lưu trữ thông tin chỉ số, vũ khí (Data + Strategy) và hình ảnh của từng class
 class PlayerClassInfo {
   final PlayerClassType type;
   final String name;
@@ -20,8 +21,8 @@ class PlayerClassInfo {
   final String initialWeaponName;
   final String initialWeaponAssetPath;
   final String flameWeaponPath; // Đường dẫn tương đối dùng cho Flame (weapon/...)
-  final WeaponInfo primaryWeapon;
-  final WeaponInfo secondaryWeapon;
+  final WeaponConfig primaryWeapon;
+  final WeaponConfig secondaryWeapon;
   final double maxHp;
   final double moveSpeed;
   final double damageMultiplier;
@@ -46,116 +47,63 @@ class PlayerClassInfo {
   });
 
   List<WeaponInfo> get loadout => [primaryWeapon, secondaryWeapon];
+  List<WeaponConfig> get weaponConfigs => [primaryWeapon, secondaryWeapon];
 
-  /// Danh sách 3 Class nhân vật Sinh viên HUIT
+  /// Danh sách 3 Class nhân vật Sinh viên HUIT trang bị đủ 5 vũ khí đặc trưng
   static const List<PlayerClassInfo> availableClasses = [
     PlayerClassInfo(
       type: PlayerClassType.it,
       name: 'Sinh Viên IT',
       department: 'Khoa Công Nghệ Thông Tin',
-      description: 'Gõ phím thần tốc! Sát thương +20%. Trang bị Bút Viết Code & Laptop Gaming.',
+      description:
+          'Kính cận code xuyên đêm! Sát thương +20%. Trang bị Bút Bi Thần Tốc & Laptop Laser.',
       spriteAssetPath: 'assets/images/${GameConstants.playerITPath}',
       flameSpritePath: GameConstants.playerITPath,
-      initialWeaponName: 'Bút Viết Code',
+      initialWeaponName: 'Bút Bi Thần Tốc',
       initialWeaponAssetPath: 'assets/images/${GameConstants.weaponPenPath}',
       flameWeaponPath: GameConstants.weaponPenPath,
-      primaryWeapon: WeaponInfo(
-        name: 'Bút Viết Code',
-        assetPath: 'assets/images/${GameConstants.weaponPenPath}',
-        flamePath: GameConstants.weaponPenPath,
-        damage: 28.0,
-        fireCooldown: 0.24,
-        bulletSpeed: 520.0,
-        bulletCount: 1,
-        bulletColor: Colors.cyanAccent,
-      ),
-      secondaryWeapon: WeaponInfo(
-        name: 'Laptop Gaming',
-        assetPath: 'assets/images/${GameConstants.weaponLaptopPath}',
-        flamePath: GameConstants.weaponLaptopPath,
-        damage: 20.0,
-        fireCooldown: 0.44,
-        bulletSpeed: 460.0,
-        bulletCount: 3,
-        spreadAngleRadians: 0.38,
-        bulletColor: Color(0xFF40C4FF),
-      ),
+      primaryWeapon: WeaponConfig.pen,
+      secondaryWeapon: WeaponConfig.laptop,
       maxHp: 100.0,
       moveSpeed: 185.0,
       damageMultiplier: 1.2,
-      themeColor: Colors.cyanAccent,
+      themeColor: GameConstants.pixelCyan,
     ),
     PlayerClassInfo(
       type: PlayerClassType.food,
       name: 'Sinh Viên Thực Phẩm',
       department: 'Khoa Công Nghệ Thực Phẩm',
-      description: 'Dinh dưỡng dồi dào! Thêm 40% máu tối đa. Trang bị Trà Sữa & Laptop Lab.',
+      description:
+          'Kính bảo hộ Lab & dinh dưỡng dồi dào (+40% HP). Trang bị Trà Sữa Hồi Máu & Giáo Trình.',
       spriteAssetPath: 'assets/images/${GameConstants.playerFoodPath}',
       flameSpritePath: GameConstants.playerFoodPath,
-      initialWeaponName: 'Trà Sữa Hồi Máu',
+      initialWeaponName: 'Trà Sữa Trân Châu',
       initialWeaponAssetPath: 'assets/images/${GameConstants.weaponBobaPath}',
       flameWeaponPath: GameConstants.weaponBobaPath,
-      primaryWeapon: WeaponInfo(
-        name: 'Trà Sữa Hồi Máu',
-        assetPath: 'assets/images/${GameConstants.weaponBobaPath}',
-        flamePath: GameConstants.weaponBobaPath,
-        damage: 32.0,
-        fireCooldown: 0.28,
-        bulletSpeed: 470.0,
-        bulletCount: 1,
-        bulletColor: Colors.lightGreenAccent,
-      ),
-      secondaryWeapon: WeaponInfo(
-        name: 'Laptop Phân Tích',
-        assetPath: 'assets/images/${GameConstants.weaponLaptopPath}',
-        flamePath: GameConstants.weaponLaptopPath,
-        damage: 19.0,
-        fireCooldown: 0.45,
-        bulletSpeed: 450.0,
-        bulletCount: 3,
-        spreadAngleRadians: 0.42,
-        bulletColor: Color(0xFF69F0AE),
-      ),
+      primaryWeapon: WeaponConfig.boba,
+      secondaryWeapon: WeaponConfig.textbook,
       maxHp: 140.0,
       moveSpeed: 165.0,
       damageMultiplier: 1.0,
-      themeColor: Colors.lightGreenAccent,
+      themeColor: GameConstants.pixelEmerald,
     ),
     PlayerClassInfo(
       type: PlayerClassType.eco,
       name: 'Sinh Viên Kinh Tế',
       department: 'Khoa Quản Trị Kinh Doanh',
-      description: 'Nhanh nhạy & linh hoạt! Di chuyển +20%. Trang bị USB Dữ Liệu & Bút Ký.',
+      description:
+          'Mũ vàng năng động, chạy nhanh +20%. Trang bị USB Phi Tiêu Nảy Tường & Giáo Trình.',
       spriteAssetPath: 'assets/images/${GameConstants.playerEcoPath}',
       flameSpritePath: GameConstants.playerEcoPath,
-      initialWeaponName: 'USB Dữ Liệu',
+      initialWeaponName: 'USB Phi Tiêu',
       initialWeaponAssetPath: 'assets/images/${GameConstants.weaponUsbPath}',
       flameWeaponPath: GameConstants.weaponUsbPath,
-      primaryWeapon: WeaponInfo(
-        name: 'USB Dữ Liệu',
-        assetPath: 'assets/images/${GameConstants.weaponUsbPath}',
-        flamePath: GameConstants.weaponUsbPath,
-        damage: 24.0,
-        fireCooldown: 0.19,
-        bulletSpeed: 540.0,
-        bulletCount: 1,
-        bulletColor: Colors.amberAccent,
-      ),
-      secondaryWeapon: WeaponInfo(
-        name: 'Bút Ký Hợp Đồng',
-        assetPath: 'assets/images/${GameConstants.weaponPenPath}',
-        flamePath: GameConstants.weaponPenPath,
-        damage: 36.0,
-        fireCooldown: 0.38,
-        bulletSpeed: 580.0,
-        bulletCount: 2,
-        spreadAngleRadians: 0.18,
-        bulletColor: Color(0xFFFFD54F),
-      ),
+      primaryWeapon: WeaponConfig.usb,
+      secondaryWeapon: WeaponConfig.textbook,
       maxHp: 90.0,
       moveSpeed: 218.0,
       damageMultiplier: 1.0,
-      themeColor: Colors.amberAccent,
+      themeColor: GameConstants.pixelGold,
     ),
   ];
 
